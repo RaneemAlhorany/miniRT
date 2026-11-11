@@ -1,0 +1,143 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   paraboloid_hit.c                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: babo-sai <babo-sai@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/10/29 16:20:09 by babo-sai          #+#    #+#             */
+/*   Updated: 2026/10/29 16:20:10 by babo-sai         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "paraboloid_hit.h"
+
+bool	valid_root(t_paraboloid *paraboloid, t_ray ray, t_interval interval,
+		double root)
+{
+	t_vec	from_vertex;
+	double	axis_distance;
+
+	if (root <= interval.min || root >= interval.max)
+		return (false);
+	from_vertex = point_sub_point(ray_at(ray, root), paraboloid->vertex);
+	axis_distance = vec_dot(from_vertex, paraboloid->axis);
+	return (axis_distance >= 0.0 && axis_distance <= paraboloid->height);
+}
+
+t_vec	to_local(t_vec value, t_vec axis, t_vec side, t_vec other_side)
+{
+	return ((t_vec){vec_dot(value, side), vec_dot(value, other_side),
+		vec_dot(value, axis)});
+}
+
+void	calculate_equation_paraboloid(t_paraboloid_data data,
+		t_quadratic_data *equation)
+{
+	t_vec	side;
+	t_vec	other_side;
+	t_vec	origin;
+	t_vec	direction;
+	t_vec	reference;
+
+	if (fabs(data.paraboloid->axis.x) < 0.9)
+		reference = (t_vec){1.0, 0.0, 0.0};
+	else
+		reference = (t_vec){0.0, 1.0, 0.0};
+	side = vec_normalize(vec_cross(data.paraboloid->axis, reference));
+	other_side = vec_cross(data.paraboloid->axis, side);
+	origin = to_local(point_sub_point(data.ray.origin, data.paraboloid->vertex),
+			data.paraboloid->axis, side, other_side);
+	direction = to_local(data.ray.direction, data.paraboloid->axis, side,
+			other_side);
+	equation->a = direction.x * direction.x + direction.y * direction.y;
+	equation->b = 2.0 * (origin.x * direction.x + origin.y * direction.y) - 2.0
+		* data.coefficient * direction.z;
+	equation->c = origin.x * origin.x + origin.y * origin.y - 2.0
+		* data.coefficient * origin.z;
+	equation->discriminant = equation->b * equation->b - 4.0 * equation->a
+		* equation->c;
+}
+
+bool	paraboloid_find_root(t_paraboloid_data data, double *root)
+{
+	t_quadratic_data	equation;
+
+	calculate_equation_paraboloid(data, &equation);
+	if (fabs(equation.a) < EPSILON)
+	{
+		if (fabs(equation.b) < EPSILON)
+			return (false);
+		*root = -equation.c / equation.b;
+		return (valid_root(data.paraboloid, data.ray, data.interval, *root));
+	}
+	if (equation.discriminant < 0.0)
+		return (false);
+	equation.sqrtd = sqrt(equation.discriminant);
+	*root = (-equation.b - equation.sqrtd) / (2.0 * equation.a);
+	if (valid_root(data.paraboloid, data.ray, data.interval, *root))
+		return (true);
+	*root = (-equation.b + equation.sqrtd) / (2.0 * equation.a);
+	return (valid_root(data.paraboloid, data.ray, data.interval, *root));
+}
+
+bool	paraboloid_hit(t_object *object, t_ray ray, t_interval interval,
+		t_hit_record *record)
+{
+	t_paraboloid		*paraboloid;
+	t_paraboloid_data	data;
+	t_vec				from_vertex;
+	double				coefficient;
+	double				root;
+
+	paraboloid = &object->data.paraboloid;
+	coefficient = (paraboloid->radius * paraboloid->radius) / (2.0
+			* paraboloid->height);
+	data.paraboloid = paraboloid;
+	data.ray = ray;
+	data.interval = interval;
+	data.coefficient = coefficient;
+	if (!paraboloid_find_root(data, &root))
+		return (false);
+	record->t = root;
+	record->point = ray_at(ray, root);
+	from_vertex = point_sub_point(record->point, paraboloid->vertex);
+	record->normal = (vec_normalize(vec_sub(vec_sub(from_vertex,
+						vec_scale(paraboloid->axis, vec_dot(from_vertex,
+								paraboloid->axis))), vec_scale(paraboloid->axis,
+						coefficient))));
+	hit_record_set_face_normal(record, ray, record->normal);
+	record->object = object;
+	return (true);
+}
+
+//! steps:
+/*
+	Local coordinates:
+	1) Select reference q not parallel to axis a and build:
+		side = normalize(a x q), other_side = a x side.
+	2) Convert any vector v to local coordinates:
+		v_local = (v . side, v . other_side, v . a).
+	3) For k = radius^2 / (2*height), the local paraboloid is:
+		x^2 + y^2 = 2*k*z.
+
+	Root search:
+	4) Substitute O + t*d into the paraboloid equation:
+		A = dx^2 + dy^2,
+		B = 2(ox*dx + oy*dy) - 2*k*dz,
+		C = ox^2 + oy^2 - 2*k*oz.
+	5) Compute Delta = B^2 - 4AC.
+		If |A| < EPSILON, solve the linear equation t = -C/B.
+	6) Otherwise reject Delta < 0 and compute:
+		t1 = (-B - sqrt(Delta))/(2A),
+		t2 = (-B + sqrt(Delta))/(2A).
+	7) Accept a root only when interval.min < t < interval.max and:
+		0 <= (P(t) - vertex) . a <= height.
+
+	Hit record:
+	8) Compute P = O + t*d and its axial projection:
+		axis_point = vertex + ((P - vertex) . a)a.
+	9) The normal used by the implementation is:
+		normal = normalize((P - vertex) - axis_point - k*a).
+	10) Orient the normal against the ray, store the object, and return true.
+*/
