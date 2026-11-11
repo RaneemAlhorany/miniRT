@@ -1,0 +1,190 @@
+NAME		= miniRT
+
+CC			= cc
+CFLAGS = -Wall -Wextra -Werror 
+
+RM			= rm -f
+RMDIR		= rm -rf
+
+LIBFT_DIR	= libft
+LIBFT		= $(LIBFT_DIR)/libft.a
+
+MLX_DIR		= mlx
+MLX			= $(MLX_DIR)/libmlx.a
+
+INCLUDES	= -I. \
+	-I$(LIBFT_DIR) \
+	-I$(MLX_DIR) \
+	-Iget_next_line
+
+LIBS		= $(LIBFT) \
+	$(MLX) \
+	-lXext \
+	-lX11 \
+	-lm
+
+MAIN_SRC = main.c
+
+UTILS_SRC = utils/error.c\
+	utils/destroy_scene.c \
+	utils/destroy_texture.c
+	
+GNL_SRC = get_next_line/get_next_line.c \
+	get_next_line/get_next_line_utils.c
+
+lib_math_SRC = lib_math/color/color_add.c \
+	lib_math/color/color_clamp.c \
+	lib_math/color/color_multiply.c \
+	lib_math/color/color_scale.c \
+	lib_math/color/color_to_hex.c \
+	lib_math/vector/vec_reflect.c \
+	lib_math/color/color_clamp_rgb.c \
+	lib_math/point/point_add_vec.c \
+	lib_math/point/point_sub_point.c \
+	lib_math/point/point_sub_vec.c \
+	lib_math/vector/vec_add.c \
+	lib_math/vector/vec_cross.c \
+	lib_math/vector/vec_distance.c \
+	lib_math/vector/vec_dot.c \
+	lib_math/vector/vec_length.c \
+	lib_math/vector/vec_normalize.c \
+	lib_math/vector/vec_scale.c \
+	lib_math/vector/vec_sub.c \
+	lib_math/ray/ray_at.c 
+
+INTERSECTOR_SRC = intersector/hit/hit_record_set_face_normal.c \
+	intersector/hit/world_hit.c \
+	intersector/hit/object_dispatch.c \
+	intersector/sphere/sphere_hit.c \
+	intersector/plane/plane_hit.c \
+	intersector/cylinder/cylinder_body.c \
+	intersector/cylinder/cylinder_caps.c \
+	intersector/triangle/triangle_hit.c \
+	intersector/paraboloid/paraboloid_hit.c
+
+PARSER_SRC = parser/parser.c \
+	parser/builder/build_ambient.c \
+	parser/builder/build_camera.c \
+	parser/builder/build_light.c \
+	parser/builder/build_object.c \
+	parser/builder/build_scene.c \
+	parser/builder/builder_utils.c \
+	parser/builder/objects/create_object.c \
+	parser/builder/objects/build_cylinder.c \
+	parser/builder/objects/build_plane.c \
+	parser/builder/objects/build_sphere.c \
+	parser/builder/objects/build_triangle.c \
+	parser/builder/objects/build_paraboloid.c \
+	parser/builder/objects/parse_object_bonus.c \
+	parser/builder/objects/objects_utils.c\
+	parser/converter/parse_color.c \
+	parser/converter/parse_double.c \
+	parser/converter/parse_point.c \
+	parser/converter/parse_vector.c \
+	parser/converter/utils.c \
+	parser/lexer/create_token.c \
+	parser/lexer/destroy_token_list.c \
+	parser/lexer/get_token_type.c \
+	parser/lexer/lexer_utils.c \
+	parser/lexer/tokenize.c \
+	parser/lexer/copy_args.c \
+	parser/parsering_utils/read_file.c \
+	parser/parsering_utils/free_string_array.c \
+	parser/validator/validate_arg_count.c \
+	parser/validator/validate_scene_rules.c \
+	parser/validator/validate_token_types.c \
+	parser/validator/validator.c \
+	parser/validator/validator_utils.c \
+	parser/parsering_utils/check_ratio.c \
+	parser/parsering_utils/check_positive.c \
+	parser/parsering_utils/check_normal.c 
+	
+RENDERER_SRC = renderer/ambient.c \
+	renderer/diffuse.c \
+	renderer/render.c \
+	renderer/ray_color.c \
+	renderer/run_renderer.c \
+	renderer/is_in_shadow.c \
+	renderer/shade_hit.c \
+	renderer/specular_bonus.c \
+	renderer/camera/camera_build_basis.c \
+	renderer/camera/camera_compute_pixel_delta.c \
+	renderer/camera/camera_compute_viewport.c \
+	renderer/camera/camera_init.c \
+	renderer/camera/camera_ray.c 
+
+MLX_ENGINE_SRC = mlx_engine/display/mlx_display_image.c \
+	mlx_engine/events/mlx_event_close.c \
+	mlx_engine/events/mlx_event_expose.c \
+	mlx_engine/events/mlx_event_init.c \
+	mlx_engine/events/mlx_event_key.c \
+	mlx_engine/events/mlx_event_loop.c \
+	mlx_engine/image/mlx_image_create.c \
+	mlx_engine/image/mlx_image_data.c \
+	mlx_engine/image/mlx_image_destroy.c \
+	mlx_engine/pixel/mlx_image_pixel_put.c \
+	mlx_engine/window/mlx_window_create.c \
+	mlx_engine/window/mlx_window_destroy.c
+
+
+PATTERN = pattern/helper.c \
+	pattern/pattern_checker_at.c
+
+TEXTURE_SRC = texture/uv_mapping.c \
+	texture/tbn_basis.c \
+	texture/bump_map.c \
+	texture/compute_object_tbn_uv_for_each_object.c \
+	texture/texture_loader.c\
+	texture/helper_textuer.c 
+
+SRC = $(MAIN_SRC) \
+	$(UTILS_SRC) \
+	$(GNL_SRC) \
+	$(lib_math_SRC) \
+	$(INTERSECTOR_SRC) \
+	$(PARSER_SRC) \
+	$(RENDERER_SRC) \
+	$(MLX_ENGINE_SRC) \
+	$(PATTERN) \
+	$(TEXTURE_SRC)
+
+BUILD_DIR = .build
+OBJ_DIR = $(BUILD_DIR)/obj
+DEP_DIR = $(BUILD_DIR)/dep
+
+OBJ = $(patsubst %.c,$(OBJ_DIR)/%.o,$(SRC))
+DEP = $(patsubst %.c,$(DEP_DIR)/%.d,$(SRC))
+LEGACY_OBJ = $(SRC:.c=.o)
+LEGACY_DEP = $(SRC:.c=.d)
+
+all: $(LIBFT) $(MLX) $(NAME)
+bonus: $(LIBFT) $(MLX) $(NAME)
+
+$(LIBFT):
+	$(MAKE) -C $(LIBFT_DIR) bonus
+
+$(MLX):
+	$(MAKE) -C $(MLX_DIR)
+
+$(NAME): $(OBJ) $(LIBFT) $(MLX)
+	$(CC) $(CFLAGS) $(OBJ) $(LIBS) -o $(NAME)
+
+$(OBJ_DIR)/%.o: %.c
+	@mkdir -p $(@D) $(dir $(DEP_DIR)/$*.d)
+	$(CC) $(CFLAGS) -MMD -MP -MF $(DEP_DIR)/$*.d -MT $@ $(INCLUDES) -c $< -o $@
+
+-include $(DEP)
+
+clean:
+	$(RM) $(LEGACY_OBJ) $(LEGACY_DEP)
+	$(RMDIR) $(BUILD_DIR)
+	$(MAKE) -C $(LIBFT_DIR) clean
+	$(MAKE) -C $(MLX_DIR) clean
+
+fclean: clean
+	$(RM) $(NAME)
+	$(MAKE) -C $(LIBFT_DIR) fclean
+
+re: fclean all
+
+.PHONY: all clean fclean re	
